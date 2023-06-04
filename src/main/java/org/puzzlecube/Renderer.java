@@ -34,8 +34,8 @@ public class Renderer {
     private int viewLocation;
     private boolean isRunning;
 
-    private float cameraAngleY;
-    private float cameraAngleX;
+    private double cameraAngleY;
+    private double cameraAngleX;
 
     private float backgroundR, backgroundG, backgroundB, backgroundA;
 
@@ -59,6 +59,35 @@ public class Renderer {
         isRunning = false;
     }
 
+    public void drawLine(float x1, float y1, float z1, float x2, float y2, float z2) {
+        if (isRunning) {
+            float[] vertices = {
+                x1, y1, z1,
+                x2, y2, z2
+            };
+
+            glUseProgram(shaderProgram);
+
+            int vao = glGenVertexArrays();
+            int vbo = glGenBuffers();
+
+            glBindVertexArray(vao);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, vertices, GL_STREAM_DRAW);
+
+            glVertexAttribPointer(positionLocation, 3, GL_FLOAT, false, 0, 0);
+            glEnableVertexAttribArray(positionLocation);
+
+            glDrawArrays(GL_LINES, 0, 2);
+            glBindVertexArray(0);
+
+            glDeleteBuffers(vbo);
+            glDeleteVertexArrays(vao);
+        } else {
+            System.err.println("Cannot draw when the renderer is not running.");
+        }
+    }
+
     public void drawTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3,
                              float y3, float z3) {
         if (isRunning) {
@@ -78,7 +107,7 @@ public class Renderer {
             glBufferData(GL_ARRAY_BUFFER, vertices, GL_STREAM_DRAW);
     
             glVertexAttribPointer(positionLocation, 3, GL_FLOAT, false, 0, 0);
-            glEnableVertexAttribArray(0);
+            glEnableVertexAttribArray(positionLocation);
 
             glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -113,16 +142,16 @@ public class Renderer {
             setColor(0.5f, 0.f, 0.f, 1.f);
             break;
         case ORANGE:
-            setColor(1.f, 0.5f, 0.f, 1.f);
+            setColor(0.75f, 0.5f, 0.f, 1.f);
             break;
         case BLUE:
             setColor(0.f, 0.f, 0.5f, 1.f);
             break;
         case GREEN:
-            setColor(0.f, 1.f, 0.f, 1.f);
+            setColor(0.f, 0.75f, 0.f, 1.f);
             break;
         case YELLOW:
-            setColor(1.f, 1.f, 0.f, 1.f);
+            setColor(0.75f, 0.75f, 0.f, 1.f);
             break;
         }
     }
@@ -162,39 +191,59 @@ public class Renderer {
     }
 
     private void updateCamera() {
-        float cameraAngleXRadians = cameraAngleX * (float) Math.PI / 180.f;
-        float cameraAngleYRadians = cameraAngleY * (float) Math.PI / 180.f;
-        float xsin = (float) Math.sin(cameraAngleXRadians);
-        float xcos = (float) Math.cos(cameraAngleXRadians);
-        float ysin = (float) Math.sin(cameraAngleYRadians);
-        float ycos = (float) Math.cos(cameraAngleYRadians);
-        glUseProgram(shaderProgram);
-        glUniformMatrix4fv(viewLocation, true, new float [] {
-            ycos, 0, ysin, 0,
-            xsin * ysin, xcos, -xsin * ycos, 0,
-            -xcos * ysin, xsin, xcos * ycos, 0,
-            0, 0, 0, 1
-        });
+        if (isRunning) {
+            double cameraAngleXRadians = cameraAngleX * Math.PI / 180.0;
+            double cameraAngleYRadians = cameraAngleY * Math.PI / 180.0;
+            float xsin = (float) Math.sin(cameraAngleXRadians);
+            float xcos = (float) Math.cos(cameraAngleXRadians);
+            float ysin = (float) Math.sin(cameraAngleYRadians);
+            float ycos = (float) Math.cos(cameraAngleYRadians);
+            glUseProgram(shaderProgram);
+            glUniformMatrix4fv(viewLocation, true, new float [] {
+                ycos, 0, ysin, 0,
+                xsin * ysin, xcos, -xsin * ycos, 0,
+                -xcos * ysin, xsin, xcos * ycos, 0,
+                0, 0, 0, 1
+            });
+        } else {
+            System.err.println("Cannot draw when the renderer is not running.");
+        }
     }
 
-    public void rotateCameraX(float degrees) {
+    public void rotateCameraX(double degrees) {
         if (cameraAngleX + degrees <= 90 && cameraAngleX + degrees >= -90) {
             cameraAngleX += degrees;
         }
         updateCamera();
     }
 
-    public void rotateCameraY(float degrees) {
+    public void rotateCameraY(double degrees) {
         cameraAngleY += degrees;
         updateCamera();
     }
 
+    public double getCameraAngleX() {
+        return cameraAngleX;
+    }
+
+    public double getCameraAngleY() {
+        return cameraAngleY;
+    }
+
     public void turnOffCursor() {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        if (isRunning) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        } else {
+            System.err.println("Cannot draw when the renderer is not running.");
+        }
     }
 
     public void turnOnCursor() {
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        if (isRunning) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        } else {
+            System.err.println("Cannot draw when the renderer is not running.");
+        }
     }
 
     private void init() {
