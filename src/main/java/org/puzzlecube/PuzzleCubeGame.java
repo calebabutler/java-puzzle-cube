@@ -67,14 +67,10 @@ public class PuzzleCubeGame implements Game {
     // Private fields
 
     private boolean isCameraMode, isLeftShiftHeld, isLeftControlHeld, isFirstMove;
-    private double oldX, oldY;
-    private double saveAngle;
-
+    private double oldX, oldY, saveAngle;
     private MoveType currentMove;
     private Queue<MoveType> moveQueue;
-
     private Cubie[] cube;
-
     private Random random;
 
     // Private methods
@@ -493,9 +489,27 @@ public class PuzzleCubeGame implements Game {
 
     public void load(Renderer renderer) {
         renderer.setBackgroundColor(0.25f, 0.25f, 0.25f, 1.f);
+
+        // Print help information
+        System.out.println();
+        System.out.println("U     : Turn up side");
+        System.out.println("D     : Turn down side");
+        System.out.println("R     : Turn right side");
+        System.out.println("L     : Turn left side");
+        System.out.println("F     : Turn front side");
+        System.out.println("B     : Turn back side");
+        System.out.println("M     : Turn middle layer around x-axis");
+        System.out.println("S     : Turn middle layer around z-axis");
+        System.out.println("E     : Turn middle layer around y-axis");
+        System.out.println("X     : Rotate around x-axis");
+        System.out.println("Z     : Rotate around z-axis");
+        System.out.println("Enter : Scramble cube");
+        System.out.println();
+        System.out.println("By default, turns and rotations are clockwise. Hold left shift to turn/rotate");
+        System.out.println("counter-clockwise. Hold left control to turn/rotate halfwise.");
+        System.out.println();
+        System.out.println("Hold down the left mouse button and move the mouse to move the camera.");
     }
-
-
 
     public void update(Renderer renderer, double deltaTime) {
         if (currentMove == MoveType.NO_MOVE && !moveQueue.isEmpty()) {

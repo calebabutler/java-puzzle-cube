@@ -50,16 +50,9 @@ public class Renderer {
     private final Game game;
 
     private long window;
-    private int shaderProgram;
-    private int positionLocation;
-    private int colorLocation;
-    private int projectionLocation;
-    private int viewLocation;
+    private int shaderProgram, positionLocation, colorLocation, projectionLocation, viewLocation;
     private boolean isRunning;
-
-    private double cameraAngleY;
-    private double cameraAngleX;
-
+    private double cameraAngleX, cameraAngleY;
     private float backgroundR, backgroundG, backgroundB, backgroundA;
 
     // Public fields
