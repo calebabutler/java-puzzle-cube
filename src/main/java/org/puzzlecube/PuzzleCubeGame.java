@@ -1,4 +1,25 @@
 
+/* Copyright (c) 2023 Caleb Butler
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.puzzlecube;
 
 import java.util.Queue;
@@ -9,9 +30,7 @@ import static org.lwjgl.glfw.GLFW.*;
 
 public class PuzzleCubeGame implements Game {
 
-    private boolean cameraMode, isLeftShiftHeld, isLeftControlHeld;
-    private double oldX, oldY;
-    private double saveAngle;
+    // Private local types
 
     private enum MoveType {
         NO_MOVE,
@@ -45,118 +64,20 @@ public class PuzzleCubeGame implements Game {
         Z;
     }
 
+    // Private fields
+
+    private boolean isCameraMode, isLeftShiftHeld, isLeftControlHeld, isFirstMove;
+    private double oldX, oldY;
+    private double saveAngle;
+
     private MoveType currentMove;
     private Queue<MoveType> moveQueue;
-    private boolean isFirstMove;
 
     private Cubie[] cube;
 
     private Random random;
 
-    public PuzzleCubeGame() {
-        cameraMode = false;
-        currentMove = MoveType.NO_MOVE;
-        moveQueue = new LinkedList<MoveType>();
-        random = new Random();
-        isFirstMove = false;
-        oldX = 0.f;
-        oldY = 0.f;
-        isLeftShiftHeld = false;
-        isLeftControlHeld = false;
-
-        cube = new Cubie[] {
-            // Top
-            new Cubie(-0.1f, 0.1f, -0.1f, Renderer.FaceColor.WHITE, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLUE, Renderer.FaceColor.ORANGE,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
-            new Cubie(0.f, 0.1f, -0.1f, Renderer.FaceColor.WHITE, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLUE, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
-            new Cubie(0.1f, 0.1f, -0.1f, Renderer.FaceColor.WHITE, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLUE, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.RED, Renderer.FaceColor.BLACK),
-            new Cubie(-0.1f, 0.1f, 0.f, Renderer.FaceColor.WHITE, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.ORANGE,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
-            new Cubie(0.f, 0.1f, 0.f, Renderer.FaceColor.WHITE, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
-            new Cubie(0.1f, 0.1f, 0.f, Renderer.FaceColor.WHITE, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.RED, Renderer.FaceColor.BLACK),
-            new Cubie(-0.1f, 0.1f, 0.1f, Renderer.FaceColor.WHITE, Renderer.FaceColor.GREEN,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.ORANGE,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
-            new Cubie(0.f, 0.1f, 0.1f, Renderer.FaceColor.WHITE, Renderer.FaceColor.GREEN,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
-            new Cubie(0.1f, 0.1f, 0.1f, Renderer.FaceColor.WHITE, Renderer.FaceColor.GREEN,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.RED, Renderer.FaceColor.BLACK),
-
-            // Middle
-            new Cubie(-0.1f, 0.f, -0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLUE, Renderer.FaceColor.ORANGE,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
-            new Cubie(0.f, 0.f, -0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLUE, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
-            new Cubie(0.1f, 0.f, -0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLUE, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.RED, Renderer.FaceColor.BLACK),
-            new Cubie(-0.1f, 0.f, 0.f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.ORANGE,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
-            new Cubie(0.f, 0.f, 0.f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
-            new Cubie(0.1f, 0.f, 0.f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.RED, Renderer.FaceColor.BLACK),
-            new Cubie(-0.1f, 0.f, 0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.GREEN,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.ORANGE,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
-            new Cubie(0.f, 0.f, 0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.GREEN,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
-            new Cubie(0.1f, 0.f, 0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.GREEN,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.RED, Renderer.FaceColor.BLACK),
-
-            // Bottom
-            new Cubie(-0.1f, -0.1f, -0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLUE, Renderer.FaceColor.ORANGE,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.YELLOW),
-            new Cubie(0.f, -0.1f, -0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLUE, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.YELLOW),
-            new Cubie(0.1f, -0.1f, -0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLUE, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.RED, Renderer.FaceColor.YELLOW),
-            new Cubie(-0.1f, -0.1f, 0.f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.ORANGE,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.YELLOW),
-            new Cubie(0.f, -0.1f, 0.f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.YELLOW),
-            new Cubie(0.1f, -0.1f, 0.f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.RED, Renderer.FaceColor.YELLOW),
-            new Cubie(-0.1f, -0.1f, 0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.GREEN,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.ORANGE,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.YELLOW),
-            new Cubie(0.f, -0.1f, 0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.GREEN,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.YELLOW),
-            new Cubie(0.1f, -0.1f, 0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.GREEN,
-                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
-                      Renderer.FaceColor.RED, Renderer.FaceColor.YELLOW),
-        };
-    }
-
-    public void load(Renderer renderer) {
-        renderer.setBackgroundColor(0.25f, 0.25f, 0.25f, 1.f);
-    }
+    // Private methods
 
     private void continueTurn(Axis axis, float globalDesired, double direction) {
         final float tolerance = 0.02f;
@@ -467,6 +388,115 @@ public class PuzzleCubeGame implements Game {
         }
     }
 
+    // Public methods
+
+    public PuzzleCubeGame() {
+        isCameraMode = false;
+        currentMove = MoveType.NO_MOVE;
+        moveQueue = new LinkedList<MoveType>();
+        random = new Random();
+        isFirstMove = false;
+        oldX = 0.f;
+        oldY = 0.f;
+        isLeftShiftHeld = false;
+        isLeftControlHeld = false;
+
+        cube = new Cubie[] {
+            // Top
+            new Cubie(-0.1f, 0.1f, -0.1f, Renderer.FaceColor.WHITE, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLUE, Renderer.FaceColor.ORANGE,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
+            new Cubie(0.f, 0.1f, -0.1f, Renderer.FaceColor.WHITE, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLUE, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
+            new Cubie(0.1f, 0.1f, -0.1f, Renderer.FaceColor.WHITE, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLUE, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.RED, Renderer.FaceColor.BLACK),
+            new Cubie(-0.1f, 0.1f, 0.f, Renderer.FaceColor.WHITE, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.ORANGE,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
+            new Cubie(0.f, 0.1f, 0.f, Renderer.FaceColor.WHITE, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
+            new Cubie(0.1f, 0.1f, 0.f, Renderer.FaceColor.WHITE, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.RED, Renderer.FaceColor.BLACK),
+            new Cubie(-0.1f, 0.1f, 0.1f, Renderer.FaceColor.WHITE, Renderer.FaceColor.GREEN,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.ORANGE,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
+            new Cubie(0.f, 0.1f, 0.1f, Renderer.FaceColor.WHITE, Renderer.FaceColor.GREEN,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
+            new Cubie(0.1f, 0.1f, 0.1f, Renderer.FaceColor.WHITE, Renderer.FaceColor.GREEN,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.RED, Renderer.FaceColor.BLACK),
+
+            // Middle
+            new Cubie(-0.1f, 0.f, -0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLUE, Renderer.FaceColor.ORANGE,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
+            new Cubie(0.f, 0.f, -0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLUE, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
+            new Cubie(0.1f, 0.f, -0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLUE, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.RED, Renderer.FaceColor.BLACK),
+            new Cubie(-0.1f, 0.f, 0.f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.ORANGE,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
+            new Cubie(0.f, 0.f, 0.f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
+            new Cubie(0.1f, 0.f, 0.f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.RED, Renderer.FaceColor.BLACK),
+            new Cubie(-0.1f, 0.f, 0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.GREEN,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.ORANGE,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
+            new Cubie(0.f, 0.f, 0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.GREEN,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK),
+            new Cubie(0.1f, 0.f, 0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.GREEN,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.RED, Renderer.FaceColor.BLACK),
+
+            // Bottom
+            new Cubie(-0.1f, -0.1f, -0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLUE, Renderer.FaceColor.ORANGE,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.YELLOW),
+            new Cubie(0.f, -0.1f, -0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLUE, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.YELLOW),
+            new Cubie(0.1f, -0.1f, -0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLUE, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.RED, Renderer.FaceColor.YELLOW),
+            new Cubie(-0.1f, -0.1f, 0.f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.ORANGE,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.YELLOW),
+            new Cubie(0.f, -0.1f, 0.f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.YELLOW),
+            new Cubie(0.1f, -0.1f, 0.f, Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.RED, Renderer.FaceColor.YELLOW),
+            new Cubie(-0.1f, -0.1f, 0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.GREEN,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.ORANGE,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.YELLOW),
+            new Cubie(0.f, -0.1f, 0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.GREEN,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.YELLOW),
+            new Cubie(0.1f, -0.1f, 0.1f, Renderer.FaceColor.BLACK, Renderer.FaceColor.GREEN,
+                      Renderer.FaceColor.BLACK, Renderer.FaceColor.BLACK,
+                      Renderer.FaceColor.RED, Renderer.FaceColor.YELLOW),
+        };
+    }
+
+    public void load(Renderer renderer) {
+        renderer.setBackgroundColor(0.25f, 0.25f, 0.25f, 1.f);
+    }
+
+
+
     public void update(Renderer renderer, double deltaTime) {
         if (currentMove == MoveType.NO_MOVE && !moveQueue.isEmpty()) {
             currentMove = moveQueue.remove();
@@ -624,14 +654,14 @@ public class PuzzleCubeGame implements Game {
 
     public void mouseButtonPressed(Renderer renderer, int button) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            cameraMode = true;
+            isCameraMode = true;
             renderer.turnOffCursor();
         }
     }
 
     public void mouseButtonReleased(Renderer renderer, int button) {
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
-            cameraMode = false;
+            isCameraMode = false;
             renderer.turnOnCursor();
         }
     }
@@ -641,7 +671,7 @@ public class PuzzleCubeGame implements Game {
 
         double deltaX = x - oldX;
         double deltaY = y - oldY;
-        if (cameraMode) {
+        if (isCameraMode) {
             renderer.rotateCameraX((float) deltaY * speed);
             renderer.rotateCameraY((float) deltaX * speed);
         }

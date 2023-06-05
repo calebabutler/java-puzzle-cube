@@ -1,4 +1,25 @@
 
+/* Copyright (c) 2023 Caleb Butler
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.puzzlecube;
 
 import org.lwjgl.glfw.*;
@@ -11,6 +32,8 @@ import static org.lwjgl.system.MemoryUtil.*;
 
 public class Renderer {
 
+    // Public local types
+
     public enum FaceColor {
         BLACK,
         WHITE,
@@ -21,7 +44,7 @@ public class Renderer {
         YELLOW;
     }
 
-    public final int width, height;
+    // Private fields
 
     private final String windowTitle;
     private final Game game;
@@ -38,6 +61,175 @@ public class Renderer {
     private double cameraAngleX;
 
     private float backgroundR, backgroundG, backgroundB, backgroundA;
+
+    // Public fields
+
+    public final int width, height;
+
+    // Private methods
+
+    private void updateCamera() {
+        if (isRunning) {
+            double cameraAngleXRadians = cameraAngleX * Math.PI / 180.0;
+            double cameraAngleYRadians = cameraAngleY * Math.PI / 180.0;
+            float xsin = (float) Math.sin(cameraAngleXRadians);
+            float xcos = (float) Math.cos(cameraAngleXRadians);
+            float ysin = (float) Math.sin(cameraAngleYRadians);
+            float ycos = (float) Math.cos(cameraAngleYRadians);
+            glUseProgram(shaderProgram);
+            glUniformMatrix4fv(viewLocation, true, new float [] {
+                ycos, 0, ysin, 0,
+                xsin * ysin, xcos, -xsin * ycos, 0,
+                -xcos * ysin, xsin, xcos * ycos, 0,
+                0, 0, 0, 1
+            });
+        } else {
+            System.err.println("Cannot draw when the renderer is not running.");
+        }
+    }
+
+    private void init() {
+        GLFWErrorCallback.createPrint(System.err).set();
+        if (!glfwInit()) {
+            throw new IllegalStateException("Unable to initialize GLFW");
+        }
+
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+        window = glfwCreateWindow(width, height, windowTitle, NULL, NULL);
+        if (window == NULL) {
+            throw new RuntimeException("Failed to create GLFW window");
+        }
+
+        glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
+            if (action == GLFW_PRESS) {
+                game.keyPressed(this, key);
+            }
+            if (action == GLFW_RELEASE) {
+                game.keyReleased(this, key);
+            }
+        });
+
+        glfwSetMouseButtonCallback(window, (window, button, action, mods) -> {
+            if (action == GLFW_PRESS) {
+                game.mouseButtonPressed(this, button);
+            } else if (action == GLFW_RELEASE) {
+                game.mouseButtonReleased(this, button);
+            }
+        });
+
+        glfwSetCursorPosCallback(window, (window, xpos, ypos) -> {
+            game.cursorMoved(this, xpos, ypos);
+        });
+
+        glfwMakeContextCurrent(window);
+        glfwSwapInterval(1);
+        glfwShowWindow(window);
+
+        GL.createCapabilities();
+        System.err.println("GL_VENDOR: " + glGetString(GL_VENDOR));
+        System.err.println("GL_RENDERER: " + glGetString(GL_RENDERER));
+        System.err.println("GL_VERSION: " + glGetString(GL_VERSION));
+
+        glViewport(0, 0, width, height);
+
+        final String vertexShaderSource
+            = "#version 330 core\n"
+            + "in vec3 position;"
+            + "uniform mat4 view;"
+            + "uniform mat4 projection;"
+            + "void main() {"
+            + "gl_Position = projection * view * vec4(position, 1.0);"
+            + "}";
+
+        final int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+
+        glShaderSource(vertexShader, vertexShaderSource);
+        glCompileShader(vertexShader);
+
+        final String fragmentShaderSource
+            = "#version 330 core\n"
+            + "uniform vec4 color;"
+            + "out vec4 FragColor;"
+            + "void main() {"
+            + "FragColor = color;"
+            + "}";
+
+        final int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+        glShaderSource(fragmentShader, fragmentShaderSource);
+        glCompileShader(fragmentShader);
+
+        shaderProgram = glCreateProgram();
+        glAttachShader(shaderProgram, vertexShader);
+        glAttachShader(shaderProgram, fragmentShader);
+        glLinkProgram(shaderProgram);
+
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+
+        positionLocation = glGetAttribLocation(shaderProgram, "position");
+        colorLocation = glGetUniformLocation(shaderProgram, "color");
+        projectionLocation = glGetUniformLocation(shaderProgram, "projection");
+        viewLocation = glGetUniformLocation(shaderProgram, "view");
+
+        glUseProgram(shaderProgram);
+        glUniform4f(colorLocation, 1.0f, 1.0f, 1.0f, 1.0f);
+
+        // Default view matrix
+        glUniformMatrix4fv(viewLocation, true, new float [] {
+            1.f, 0.f, 0.f, 0.f,
+            0.f, 1.f, 0.f, 0.f,
+            0.f, 0.f, 1.f, 0.f,
+            0.f, 0.f, 0.f, 1.f
+        });
+
+        // Calculate projection matrix
+        final float fov = 60.f;
+        final float aspect = width / height;
+        final float zNear = 0.1f;
+        final float zFar = 2.f;
+
+        final float tanHalfFov = (float) Math.tan(fov / 2.f * Math.PI / 180.f);
+        glUniformMatrix4fv(projectionLocation, true, new float [] {
+            1.f / (aspect * tanHalfFov), 0.f, 0.f, 0.f,
+            0.f, 1.f / tanHalfFov, 0.f, 0.f,
+            0.f, 0.f, -(zFar + zNear) / (zFar - zNear), (zFar + zNear - 2 * zFar * zNear) / (zFar - zNear),
+            0.f, 0.f, -1.f, 1.f
+        });
+
+        cameraAngleX = 0.f;
+        cameraAngleY = 0.f;
+
+        backgroundR = 0.5f;
+        backgroundG = 0.5f;
+        backgroundB = 0.5f;
+        backgroundA = 1.0f;
+
+        glEnable(GL_DEPTH_TEST);
+    }
+
+    private void loop() {
+        double currentTime = 0.0;
+        double lastTime = 0.0;
+        double deltaTime = 0.0;
+        game.load(this);
+        while (!glfwWindowShouldClose(window)) {
+            currentTime = glfwGetTime();
+            deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            game.update(this, deltaTime);
+            glClearColor(backgroundR, backgroundG, backgroundB, backgroundA);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            game.draw(this);
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+        }
+    }
+
+    // Public methods
 
     public Renderer(Game game, String windowTitle, int width, int height) {
         this.game = game;
@@ -190,26 +382,6 @@ public class Renderer {
         backgroundA = a;
     }
 
-    private void updateCamera() {
-        if (isRunning) {
-            double cameraAngleXRadians = cameraAngleX * Math.PI / 180.0;
-            double cameraAngleYRadians = cameraAngleY * Math.PI / 180.0;
-            float xsin = (float) Math.sin(cameraAngleXRadians);
-            float xcos = (float) Math.cos(cameraAngleXRadians);
-            float ysin = (float) Math.sin(cameraAngleYRadians);
-            float ycos = (float) Math.cos(cameraAngleYRadians);
-            glUseProgram(shaderProgram);
-            glUniformMatrix4fv(viewLocation, true, new float [] {
-                ycos, 0, ysin, 0,
-                xsin * ysin, xcos, -xsin * ycos, 0,
-                -xcos * ysin, xsin, xcos * ycos, 0,
-                0, 0, 0, 1
-            });
-        } else {
-            System.err.println("Cannot draw when the renderer is not running.");
-        }
-    }
-
     public void rotateCameraX(double degrees) {
         if (cameraAngleX + degrees <= 90 && cameraAngleX + degrees >= -90) {
             cameraAngleX += degrees;
@@ -243,147 +415,6 @@ public class Renderer {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         } else {
             System.err.println("Cannot draw when the renderer is not running.");
-        }
-    }
-
-    private void init() {
-        GLFWErrorCallback.createPrint(System.err).set();
-        if (!glfwInit()) {
-            throw new IllegalStateException("Unable to initialize GLFW");
-        }
-
-        glfwDefaultWindowHints();
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-        window = glfwCreateWindow(width, height, windowTitle, NULL, NULL);
-        if (window == NULL) {
-            throw new RuntimeException("Failed to create GLFW window");
-        }
-
-        glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
-            if (action == GLFW_PRESS) {
-                game.keyPressed(this, key);
-            }
-            if (action == GLFW_RELEASE) {
-                game.keyReleased(this, key);
-            }
-        });
-
-        glfwSetMouseButtonCallback(window, (window, button, action, mods) -> {
-            if (action == GLFW_PRESS) {
-                game.mouseButtonPressed(this, button);
-            } else if (action == GLFW_RELEASE) {
-                game.mouseButtonReleased(this, button);
-            }
-        });
-
-        glfwSetCursorPosCallback(window, (window, xpos, ypos) -> {
-            game.cursorMoved(this, xpos, ypos);
-        });
-
-        glfwMakeContextCurrent(window);
-        glfwSwapInterval(1);
-        glfwShowWindow(window);
-
-        GL.createCapabilities();
-        System.err.println("GL_VENDOR: " + glGetString(GL_VENDOR));
-        System.err.println("GL_RENDERER: " + glGetString(GL_RENDERER));
-        System.err.println("GL_VERSION: " + glGetString(GL_VERSION));
-
-        glViewport(0, 0, width, height);
-
-        final String vertexShaderSource
-            = "#version 330 core\n"
-            + "in vec3 position;"
-            + "uniform mat4 view;"
-            + "uniform mat4 projection;"
-            + "void main() {"
-            + "gl_Position = projection * view * vec4(position, 1.0);"
-            + "}";
-
-        final int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-
-        glShaderSource(vertexShader, vertexShaderSource);
-        glCompileShader(vertexShader);
-
-        final String fragmentShaderSource
-            = "#version 330 core\n"
-            + "uniform vec4 color;"
-            + "out vec4 FragColor;"
-            + "void main() {"
-            + "FragColor = color;"
-            + "}";
-
-        final int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-        glShaderSource(fragmentShader, fragmentShaderSource);
-        glCompileShader(fragmentShader);
-
-        shaderProgram = glCreateProgram();
-        glAttachShader(shaderProgram, vertexShader);
-        glAttachShader(shaderProgram, fragmentShader);
-        glLinkProgram(shaderProgram);
-
-        glDeleteShader(vertexShader);
-        glDeleteShader(fragmentShader);
-
-        positionLocation = glGetAttribLocation(shaderProgram, "position");
-        colorLocation = glGetUniformLocation(shaderProgram, "color");
-        projectionLocation = glGetUniformLocation(shaderProgram, "projection");
-        viewLocation = glGetUniformLocation(shaderProgram, "view");
-
-        glUseProgram(shaderProgram);
-        glUniform4f(colorLocation, 1.0f, 1.0f, 1.0f, 1.0f);
-
-        // Default view matrix
-        glUniformMatrix4fv(viewLocation, true, new float [] {
-            1.f, 0.f, 0.f, 0.f,
-            0.f, 1.f, 0.f, 0.f,
-            0.f, 0.f, 1.f, 0.f,
-            0.f, 0.f, 0.f, 1.f
-        });
-
-        // Calculate projection matrix
-        final float fov = 60.f;
-        final float aspect = width / height;
-        final float zNear = 0.1f;
-        final float zFar = 2.f;
-
-        final float tanHalfFov = (float) Math.tan(fov / 2.f * Math.PI / 180.f);
-        glUniformMatrix4fv(projectionLocation, true, new float [] {
-            1.f / (aspect * tanHalfFov), 0.f, 0.f, 0.f,
-            0.f, 1.f / tanHalfFov, 0.f, 0.f,
-            0.f, 0.f, -(zFar + zNear) / (zFar - zNear), (zFar + zNear - 2 * zFar * zNear) / (zFar - zNear),
-            0.f, 0.f, -1.f, 1.f
-        });
-
-        cameraAngleX = 0.f;
-        cameraAngleY = 0.f;
-
-        backgroundR = 0.5f;
-        backgroundG = 0.5f;
-        backgroundB = 0.5f;
-        backgroundA = 1.0f;
-
-        glEnable(GL_DEPTH_TEST);
-    }
-
-    private void loop() {
-        double currentTime = 0.0;
-        double lastTime = 0.0;
-        double deltaTime = 0.0;
-        game.load(this);
-        while (!glfwWindowShouldClose(window)) {
-            currentTime = glfwGetTime();
-            deltaTime = currentTime - lastTime;
-            lastTime = currentTime;
-            game.update(this, deltaTime);
-            glClearColor(backgroundR, backgroundG, backgroundB, backgroundA);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            game.draw(this);
-            glfwSwapBuffers(window);
-            glfwPollEvents();
         }
     }
 
