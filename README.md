@@ -8,9 +8,9 @@ An interactive 3x3 Puzzle Cube in LWJGL
 How to Compile
 ==============
 
-First, install java 19, maven, and git. On Ubuntu, you do this by executing this command:
+First, install java 17 (the current LTS), maven, and git. On Debian and Ubuntu, you do this by executing this command:
 
-    > sudo apt install maven java19-sdk git
+    > sudo apt install maven openjdk-17-jdk git
 
 Next, clone this git repository:
 
